@@ -16,7 +16,7 @@ m1 = real(z);
 m2 = imag(z);
 
 power_ratio = 1-MagGamma.^2;
-mySmithPlot(ReGamma, ImGamma, power_ratio, 'Power Ratio')
+mySmithPlot(ReGamma, ImGamma, power_ratio, 'Power Ratio', true)
 colormap(flipud(copper))
 
 %% Current ratio on smith plot
@@ -29,14 +29,19 @@ figure(2)
 clf
 hold on
 
-for b_a = b_over_a
+markers = {'-',':','--','-.','--*'};
+
+for i = 1:length(b_over_a)
+    b_a = b_over_a(i);
     sqrt_term = b_a^2 * sq_coeff + b_a * lin_coeff + const_coeff;
     sqrt_term(sqrt_term<0) = 1e-16;
     currentRatio = 2 ./ sqrt(sqrt_term);
-    [Z1_non_dom, Z2_non_dom] = mySmithPlot(ReGamma, ImGamma, currentRatio, ['Current Ratio, #alpha = ', num2str(b_a)], power_ratio, 'm');
+    currentTitle = ['Current Ratio $\frac{|I_L|}{|I_L^m|}$, for $\alpha = ', num2str(b_a), '$'];
+    showColorbar = b_a == b_over_a(end); % only show colorbar on last plot
+    [Z1_non_dom, Z2_non_dom] = mySmithPlot(ReGamma, ImGamma, currentRatio, currentTitle, showColorbar, power_ratio, 'm');
     if b_a >= 0 % only plot positive because pos and neg are the same
         figure(2)
-        plot(Z1_non_dom,Z2_non_dom,'DisplayName',['|\alpha|=',num2str(b_a)])
+        plot(Z1_non_dom,Z2_non_dom,['m',markers{i-4}],'DisplayName',['|\alpha|=',num2str(b_a)])
     end
 end
 
@@ -48,17 +53,17 @@ legend
 improvePlot
 
 %% Voltage Ratio on smith plot
-figure(2)
-clf
-hold on
 
-for b_a = b_over_a
+for i = 1:length(b_over_a)
+    b_a = b_over_a(i);
     complex_term = z * (1 - b_a * 1i) ./ (1 + z + (1 - z)*b_a*1i);
     voltageRatio = 2/sqrt(1 + b_a^2) * abs(complex_term);
-    [Z1_non_dom, Z2_non_dom] = mySmithPlot(ReGamma, ImGamma, voltageRatio, ['Voltage Ratio, #alpha = ', num2str(b_a)], power_ratio, 'g');
+    voltageTitle = ['Voltage Ratio $\frac{|V_L|}{|V_L^m|}$, for $\alpha = ', num2str(b_a),'$'];
+    showColorbar = b_a == b_over_a(end); % only show colorbar on last plot
+    [Z1_non_dom, Z2_non_dom] = mySmithPlot(ReGamma, ImGamma, voltageRatio, voltageTitle, showColorbar, power_ratio, 'g');
     if b_a >= 0 % only plot positive because pos and neg are the same
         figure(2)
-        plot(Z1_non_dom,Z2_non_dom,'DisplayName',['|\alpha|=',num2str(b_a)])
+        plot(Z1_non_dom,Z2_non_dom,['g',markers{i-4}],'DisplayName',['|\alpha|=',num2str(b_a)])
     end
 end
 
@@ -69,8 +74,31 @@ title('Pareto Front')
 legend
 improvePlot
 
-%% Pareto tradeoff of voltage and current and power
+%% Optimal voltage and current, but symbolic instead of numerical optimum
+syms P_ratio real positive
+syms alpha real
+GamMag = sqrt(1-P_ratio);
+num = alpha^2 * GamMag^2 - sqrt( (alpha^2+1)*(alpha^2*GamMag^4 + 1) ) + 1;
+den_V = alpha * (1 - GamMag)^2;
+den_I = alpha * (1 + GamMag)^2;
+V_ratio_opt = 2*atan(num/den_V);
+I_ratio_opt = 2*atan(num/den_I);
 
+figure
+for i=1:length(b_over_a)
+    b_a = b_over_a(i);
+    V = subs(V_ratio_opt,alpha,b_a);
+    I = subs(I_ratio_opt,alpha,b_a);
+    fplot(V,[0 1],'-','DisplayName',['voltage',num2str(b_a)])
+    hold on
+    fplot(I,[0 1],'--','DisplayName',['current',num2str(b_a)])
+    legend
+    xlabel('Power Ratio')
+    ylabel('Current/Voltage Ratio')
+end
+
+%% Pareto tradeoff of voltage and current and power
+close all
 b_a_pos = [0, 1, 2, 5, 20];
 
 sq_coeff = m2.^2 + (1-m1).^2;
@@ -112,8 +140,17 @@ for j = 1:length(b_a_pos)
         cur_sorted = cur(sort_idx);
         vol_opt_path(i,:) = [vol_sorted(1), cur_sorted(1)];
         cur_opt_path(i,:) = [vol_sorted(end), cur_sorted(end)];
-        plot(vol_sorted,cur_sorted,'HandleVisibility','off','Color',colors(i,:))
+        plot(vol_sorted,cur_sorted,'HandleVisibility','off','Color',colors(i,:),'LineWidth',1.5)
     end
+
+    % optimal paths
+    plot(vol_opt_path(:,1),vol_opt_path(:,2),'g:','DisplayName','Voltage Optimal Path','LineWidth',2.5)
+    plot(cur_opt_path(:,1),cur_opt_path(:,2),'m-.','DisplayName','Current Optimal Path','LineWidth',2.5)
+
+    % dummy pareto for legend
+    middleIdx = round(length(Gammas)/2);
+    plot(NaN,NaN,'DisplayName','Pareto front','Color',colors(middleIdx,:))
+
     xlabel('Voltage Ratio')
     ylabel('Current Ratio')
     title(['|\alpha| = ',num2str(b_a)])
@@ -122,51 +159,58 @@ for j = 1:length(b_a_pos)
     ylim([0 2])
     % plot([0 1],[1 1],'k--','HandleVisibility','off')
     % plot([1 1],[0 1],'k--','HandleVisibility','off')
-    plot(vol_opt_path(:,1),vol_opt_path(:,2),'g:','DisplayName','Voltage Optimal Path','LineWidth',1.5)
-    plot(cur_opt_path(:,1),cur_opt_path(:,2),'m-.','DisplayName','Current Optimal Path','LineWidth',1.5)
     legend
 
-    % color bar for gamma
-    cb = colorbar;
-    colormap('copper')
+    showColorbar = j == length(b_a_pos); % only show colorbar on last plot
+    if showColorbar
+        % color bar for gamma
+        cb = colorbar;
+        colormap('copper')
+        
+        % second color bar for power ratio
+        % see https://www.mathworks.com/matlabcentral/answers/475762-colormap-utility-two-axes-in-colorbar
+        power_ratio_evenly_spaced = 1 : -0.1 : 0;
+        gamma_for_equally_spaced_power_ratio = sqrt(1 - power_ratio_evenly_spaced);
+        ax = gca;
+        cb2 = axes('Position',cb.Position,'color','none');  % add new axes at same posn
+        cb2.XAxis.Visible = 'off';                          % hide the x axis of new
+        posn = ax.Position;                                 % get main axes location
+        posn(3) = 0.8 * posn(3);                            % cut down width
+        ax.Position = posn;           % resize main axes to make room for colorbar labels
+        yticks(cb2,gamma_for_equally_spaced_power_ratio);
+        yticklabels(cb2, cellstr(string(power_ratio_evenly_spaced)) );
     
-    % second color bar for power ratio
-    % see https://www.mathworks.com/matlabcentral/answers/475762-colormap-utility-two-axes-in-colorbar
-    power_ratio_evenly_spaced = 1 : -0.1 : 0;
-    gamma_for_equally_spaced_power_ratio = sqrt(1 - power_ratio_evenly_spaced);
-    ax = gca;
-    cb2 = axes('Position',cb.Position,'color','none');  % add new axes at same posn
-    cb2.XAxis.Visible = 'off';                          % hide the x axis of new
-    posn = ax.Position;                                 % get main axes location
-    posn(3) = 0.8 * posn(3);                            % cut down width
-    ax.Position = posn;           % resize main axes to make room for colorbar labels
-    yticks(cb2,gamma_for_equally_spaced_power_ratio);
-    yticklabels(cb2, cellstr(string(power_ratio_evenly_spaced)) );
-
-    ylabel(cb,'Reflection Coefficient Magnitude |\Gamma|')
-    ylabel(cb2,'Power Ratio P_L/P_L^m')
-    cb.Position = cb2.Position;  % put the colorbar back to overlay second axeix
+        ylabel(cb,'Reflection Coefficient Magnitude |\Gamma|')
+        ylabel(cb2,'Power Ratio P_L/P_L^m')
+        cb.Position = cb2.Position;  % put the colorbar back to overlay second axeix
+    end
     
     improvePlot
-    set(cb2,'FontWeight','normal','LineWidth',0.5)
-    box off
-    set(gcf,'Pos',[100 100 800 600]) % make plot wider
+
+    if showColorbar
+        set(cb2,'FontWeight','normal','LineWidth',0.5)
+        box off
+        set(gcf,'Pos',[100 100 850 600]) % make plot wider
+    end
 end
 
 %% smith plot function
-function [Z1_nondom_sorted, Z2_nondom_sorted] = mySmithPlot(X,Y,Z,titleString,Z_pareto_compare,col)
+function [Z1_nondom_sorted, Z2_nondom_sorted] = mySmithPlot(X,Y,Z,titleString,showColorbar,Z_pareto_compare,col)
+% Z pareto compare and col (color) are optional arguments to trace out an optimal path
+
     figure('Color',[1 1 1])
-    smithplot('TitleTop',titleString)
+    smithplot('TitleTop',titleString,'TitleTopTextInterpreter','latex', ...
+        'TitleTopFontSizeMultiplier',1.5)
     hold on
     levs = 0:0.1:1;
     Z_capped = Z;
     Z_capped(Z>1) = NaN;
-    contour(X, Y, Z_capped, levs, 'HandleVisibility','off');
+    contour(X, Y, Z_capped, levs, 'HandleVisibility','off','LineWidth',3);
 
     grey = [.3 .3 .3];
     red = [.5 .1 .1];
 
-    % dark grey shading where Z>1
+    % colored shading where Z>1
     if max(Z,[],'all') > 1
         Z_caps = Z;
         Z_caps(Z<=1) = NaN;
@@ -174,12 +218,14 @@ function [Z1_nondom_sorted, Z2_nondom_sorted] = mySmithPlot(X,Y,Z,titleString,Z_
         patch(NaN,NaN,col,'FaceAlpha',0.2,'DisplayName','Exceeds z=1 Baseline') % dummy patch for legend
     end
 
-    cb = colorbar;
-    scale = 0.8; % smaller colorbar
-    cb.Position = [cb.Position(1), cb.Position(2)+0.1, ...
-        cb.Position(3)*scale cb.Position(4)*scale];
+    if showColorbar
+        cb = colorbar;
+        scale = 0.8; % smaller colorbar to fit smith chart
+        cb.Position = [cb.Position(1), cb.Position(2)+0.1, ...
+            cb.Position(3)*scale cb.Position(4)*scale];
+    end
 
-    if nargin>4
+    if nargin>5
         Z_capped(X==1) = NaN; % don't include far right point because it has 
         % the same value as the far left point (0,0) and will mess up the optimum curve
         p = [-Z_capped(:), Z_pareto_compare(:)]; % assumes max Z is better
@@ -199,7 +245,7 @@ function [Z1_nondom_sorted, Z2_nondom_sorted] = mySmithPlot(X,Y,Z,titleString,Z_
         % trace out nondominated points
         X_opt = X(non_dom_idxs);
         Y_opt = Y(non_dom_idxs);
-        plot(X_opt(sort_idxs),Y_opt(sort_idxs),[col '--'],'DisplayName','Optimal','LineWidth',2)
+        plot(X_opt(sort_idxs),Y_opt(sort_idxs),[col '--'],'DisplayName','Optimal','LineWidth',3)
         legend('location','southeast')
 
         % pareto front with dom and non dom points
