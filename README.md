@@ -1,4 +1,5 @@
 [![Open in MATLAB Online](https://www.mathworks.com/images/responsive/global/open-in-matlab-online.svg)](https://matlab.mathworks.com/open/github/v1?repo=symbiotic-engineering/IFAC_CAMS_2024)
+[![arXiv](https://img.shields.io/badge/arXiv-2409.02408-b31b1b.svg?style=flat)](https://arxiv.org/abs/2409.02408)
 
 # Force Saturation Analysis
 
