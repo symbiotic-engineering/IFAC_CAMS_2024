@@ -2,7 +2,7 @@
 
 # Force Saturation Analysis
 
-This repository can replicate the plots in the IFAC-CAMS paper, showing the effect of an impedance mismatch on electrical power production of a wave energy converter, and especially the effect of an impedance mismatch caused by nonlinear actuator force saturation.
+This repository can replicate the plots in the [IFAC-CAMS paper](http://arxiv.org/abs/2409.02408), showing the effect of an impedance mismatch on electrical power production of a wave energy converter, and especially the effect of an impedance mismatch caused by nonlinear actuator force saturation.
 
 Note that it is intended for showing relationships, and is not intended for real-time execution in an optimization. Optimization-suited code for the effect of force saturation on mechanical power exists [Here](https://github.com/symbiotic-engineering/MDOcean/blob/49bee41511abcb8873273ba0ff210978d67bb053/mdocean/simulation/modules/dynamics/dynamics.m#L90), and for the effect of force saturation on electrical power will be developed soon. 
 
